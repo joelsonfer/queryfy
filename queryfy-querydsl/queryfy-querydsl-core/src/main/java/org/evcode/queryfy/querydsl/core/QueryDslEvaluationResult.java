@@ -16,11 +16,11 @@
 
 package org.evcode.queryfy.querydsl.core;
 
-import com.mysema.query.BooleanBuilder;
-import com.mysema.query.QueryModifiers;
-import com.mysema.query.types.Expression;
-import com.mysema.query.types.OrderSpecifier;
-import com.mysema.query.types.Predicate;
+import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.QueryModifiers;
+import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Predicate;
 
 import java.util.LinkedList;
 

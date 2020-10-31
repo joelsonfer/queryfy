@@ -15,16 +15,22 @@
  */
 package org.evcode.queryfy.querydsl.core;
 
-import com.mysema.query.QueryModifiers;
-import com.mysema.query.types.*;
-import com.mysema.query.types.expr.*;
+import com.querydsl.core.QueryModifiers;
+import com.querydsl.core.types.*;
 import org.evcode.queryfy.core.Visitor;
-import org.evcode.queryfy.core.operator.*;
+import org.evcode.queryfy.core.operator.OrderOperatorType;
 import org.evcode.queryfy.core.parser.ast.*;
+import org.evcode.queryfy.querydsl.core.converter.ExpressionOperationResolver;
 
 import java.util.*;
 
 public class QueryDslVisitor implements Visitor<Predicate, QueryDslContext> {
+
+    private final ExpressionOperationResolver resolver;
+
+    public QueryDslVisitor(ExpressionOperationResolver resolver) {
+        this.resolver = resolver;
+    }
 
     @Override
     public Expression visit(ProjectionNode node, QueryDslContext context) {
@@ -79,118 +85,11 @@ public class QueryDslVisitor implements Visitor<Predicate, QueryDslContext> {
     public Predicate visit(FilterNode node, QueryDslContext context) {
         Expression path = context.resolveQueryPath(node.getSelector());
 
-        if (path instanceof BooleanExpression && node.getOperator() instanceof SelectorOperatorType) {
-            BooleanExpression expression = (BooleanExpression) path;
-            if (node.getOperator() == SelectorOperatorType.IS_TRUE) {
-                return expression.isTrue();
-            }
-            if (node.getOperator() == SelectorOperatorType.IS_FALSE) {
-                return expression.isFalse();
-            }
-        }
-
-        boolean isStringOrSelectorOperator = node.getOperator() instanceof StringOperatorType ||
-                node.getOperator() instanceof SelectorOperatorType;
-
-        if (path instanceof StringExpression && isStringOrSelectorOperator) {
-            StringExpression expression = (StringExpression) path;
-
-            if (node.getOperator() == StringOperatorType.LIKE) {
-                return expression.like((String) getNodeValue(path, node, 0));
-            }
-            if (node.getOperator() == StringOperatorType.NOT_LIKE) {
-                return expression.notLike((String) getNodeValue(path, node, 0));
-            }
-            if (node.getOperator() == SelectorOperatorType.IS_EMPTY) {
-                return expression.isEmpty();
-            }
-            if (node.getOperator() == SelectorOperatorType.IS_NOT_EMPTY) {
-                return expression.isNotEmpty();
-            }
-        }
-
-        if (path instanceof NumberExpression) {
-            NumberExpression expression = (NumberExpression) path;
-
-            if (node.getOperator() == ComparisionOperatorType.GREATER) {
-                return expression.gt((Number) getNodeValue(path, node, 0));
-            }
-            if (node.getOperator() == ComparisionOperatorType.GREATER_EQUAL) {
-                return expression.goe((Number) getNodeValue(path, node, 0));
-            }
-            if (node.getOperator() == ComparisionOperatorType.LOWER) {
-                return expression.lt((Number) getNodeValue(path, node, 0));
-            }
-            if (node.getOperator() == ComparisionOperatorType.LOWER_EQUAL) {
-                return expression.loe((Number) getNodeValue(path, node, 0));
-            }
-        }
-
-        if (path instanceof ComparableExpression) {
-            ComparableExpression expression = (ComparableExpression) path;
-
-            if (node.getOperator() == ComparisionOperatorType.GREATER) {
-                return expression.gt((Comparable) getNodeValue(path, node, 0));
-            }
-            if (node.getOperator() == ComparisionOperatorType.GREATER_EQUAL) {
-                return expression.goe((Comparable) getNodeValue(path, node, 0));
-            }
-            if (node.getOperator() == ComparisionOperatorType.LOWER) {
-                return expression.lt((Comparable) getNodeValue(path, node, 0));
-            }
-            if (node.getOperator() == ComparisionOperatorType.LOWER_EQUAL) {
-                return expression.loe((Comparable) getNodeValue(path, node, 0));
-            }
-        }
-
-        if (path instanceof SimpleExpression) {
-            SimpleExpression expression = (SimpleExpression) path;
-
-            if (node.getOperator() == ComparisionOperatorType.EQUAL) {
-                return expression.eq(getNodeValue(path, node, 0));
-            }
-            if (node.getOperator() == ComparisionOperatorType.NOT_EQUAL) {
-                return expression.ne(getNodeValue(path, node, 0));
-            }
-            if (node.getOperator() == ListOperatorType.IN) {
-                return expression.in(getNodeValues(path, node));
-            }
-            if (node.getOperator() == ListOperatorType.NOT_IN) {
-                return expression.notIn(getNodeValues(path, node));
-            }
-            if (node.getOperator() == SelectorOperatorType.IS_NULL) {
-                return expression.isNull();
-            }
-            if (node.getOperator() == SelectorOperatorType.IS_NOT_NULL) {
-                return expression.isNotNull();
-            }
-        }
-
-        throw new UnsupportedOperationException("Operation not supported '" + node.getOperator().name() + "'");
+        return resolver.apply(path)
+                .map(op -> op.apply(node))
+                .orElseThrow(() -> new UnsupportedOperationException("Operation not supported '" + node.getOperator().name() + "'"));
     }
 
-    protected List getNodeValues(Expression path, FilterNode node) {
-        List args = new LinkedList();
-        for (int i = 0; i < node.getArgs().size(); i++) {
-            args.add(getNodeValue(path, node, i));
-        }
-        return args;
-    }
-
-    protected Object getNodeValue(Expression path, FilterNode node, Integer valueIndex) {
-        if (path instanceof EnumExpression) {
-            Object value = node.getArgs().get(valueIndex);
-            for (Object item : path.getType().getEnumConstants()) {
-                Enum enumValue = (Enum) item;
-                if (value instanceof String && enumValue.name().equalsIgnoreCase(value.toString())) {
-                    return item;
-                } else if (value instanceof Number && ((Number) value).intValue() == enumValue.ordinal()) {
-                    return item;
-                }
-            }
-        }
-        return node.getArgs().get(valueIndex);
-    }
 
     @Override
     public List<OrderSpecifier> visit(OrderNode node, QueryDslContext context) {

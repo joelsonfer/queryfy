@@ -15,20 +15,25 @@
  */
 package org.evcode.queryfy.querydsl.core;
 
-import com.mysema.query.QueryModifiers;
-import com.mysema.query.types.Expression;
-import com.mysema.query.types.OrderSpecifier;
-import com.mysema.query.types.Predicate;
+import com.querydsl.core.QueryModifiers;
+import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Predicate;
 import org.evcode.queryfy.core.Evaluator;
 import org.evcode.queryfy.core.parser.ParserConfig;
 import org.evcode.queryfy.core.parser.ast.*;
+import org.evcode.queryfy.querydsl.core.converter.ExpressionOperationResolver;
 
 import java.util.LinkedList;
 import java.util.List;
 
 public final class QueryDslEvaluator {
 
-    private final QueryDslVisitor visitor = new QueryDslVisitor();
+    private final QueryDslVisitor visitor;
+
+    public QueryDslEvaluator(ExpressionOperationResolver resolver) {
+        visitor = new QueryDslVisitor(resolver);
+    }
 
     public QueryDslEvaluationResult evaluate(String expression, QueryDslContext context) {
         return evaluate(expression, context, ParserConfig.DEFAULT);

@@ -15,23 +15,31 @@
  */
 package org.evcode.queryfy.querydsl.jpa;
 
-import com.mysema.query.jpa.impl.JPAQuery;
-import com.mysema.query.types.EntityPath;
-import com.mysema.query.types.OrderSpecifier;
+import com.querydsl.core.types.EntityPath;
+import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.jpa.impl.JPAQuery;
 import org.evcode.queryfy.core.parser.ParserConfig;
 import org.evcode.queryfy.querydsl.core.QueryDslContext;
 import org.evcode.queryfy.querydsl.core.QueryDslEvaluationResult;
 import org.evcode.queryfy.querydsl.core.QueryDslEvaluator;
+import org.evcode.queryfy.querydsl.core.converter.ExpressionOperationResolver;
+import org.evcode.queryfy.querydsl.core.converter.ExpressionOperationResolverImpl;
 
 import javax.persistence.EntityManager;
 import java.util.List;
 
 public class JPAQueryDslParser {
 
-    private EntityManager em;
+    private final EntityManager em;
+    private final ExpressionOperationResolver expressionOperationResolver;
 
     public JPAQueryDslParser(EntityManager em) {
+        this(em, new ExpressionOperationResolverImpl());
+    }
+
+    public JPAQueryDslParser(EntityManager em, ExpressionOperationResolver expressionOperationResolver) {
         this.em = em;
+        this.expressionOperationResolver = expressionOperationResolver;
     }
 
     public QueryDslEvaluationResult parse(String expression, QueryDslContext context) {
@@ -39,7 +47,7 @@ public class JPAQueryDslParser {
     }
 
     public QueryDslEvaluationResult parse(String expression, QueryDslContext context, ParserConfig config) {
-        QueryDslEvaluator evaluator = new QueryDslEvaluator();
+        QueryDslEvaluator evaluator = new QueryDslEvaluator(expressionOperationResolver);
         QueryDslEvaluationResult eval = evaluator.evaluate(expression, context, config);
         return eval;
     }
@@ -83,7 +91,7 @@ public class JPAQueryDslParser {
         return query;
     }
 
-    public static class JPAEvaluatedQuery extends JPAQuery {
+    public static class JPAEvaluatedQuery<RT> extends JPAQuery<RT> {
         private QueryDslEvaluationResult evaluationResult;
         private EntityPath entityPath;
 
@@ -99,9 +107,9 @@ public class JPAQueryDslParser {
 
         public <RT> List<RT> listWithProjections() {
             if (evaluationResult.getProjection() != null) {
-                return super.list(evaluationResult.getProjection());
+                return super.select(evaluationResult.getProjection()).fetch();
             }
-            return super.list(entityPath);
+            return super.select(entityPath).fetch();
         }
     }
 }

@@ -15,8 +15,8 @@
  */
 package org.evcode.queryfy.querydsl.core;
 
-import com.mysema.query.types.EntityPath;
-import com.mysema.query.types.Expression;
+import com.querydsl.core.types.EntityPath;
+import com.querydsl.core.types.Expression;
 
 import java.util.Collections;
 import java.util.HashMap;
